@@ -1,6 +1,6 @@
 [project]
 name = "linc-cli-kit"
-version = "0.1.1"
+version = "0.1.2"
 description = "Reflect a FastMCP tool registry into Click commands under one agent-grade output contract"
 requires-python = ">=3.12"
 license = "Apache-2.0"

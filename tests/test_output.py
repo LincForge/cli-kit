@@ -143,10 +143,16 @@ def test_heartbeat_emits_text_lines_in_human_mode():
         redirect_stderr(err),
         heartbeat(interval=0.05, label="t", mode="human"),
     ):
-        time.sleep(0.18)
-    lines = err.getvalue().split("\n")
-    elapsed_lines = [line for line in lines if "[t]" in line and "elapsed" in line]
-    assert len(elapsed_lines) >= 2
+        # Poll instead of a fixed sleep: slow CI runners (macOS) can schedule the heartbeat
+        # thread late, so a fixed 0.18 s window sometimes saw only one line.
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline and _elapsed_lines(err.getvalue(), "t") < 2:
+            time.sleep(0.02)
+    assert _elapsed_lines(err.getvalue(), "t") >= 2
+
+
+def _elapsed_lines(text: str, label: str) -> int:
+    return sum(1 for line in text.split("\n") if f"[{label}]" in line and "elapsed" in line)
 
 
 @pytest.mark.parametrize("mode", ["json", "jsonl", None])

@@ -1,0 +1,65 @@
+[project]
+name = "linc-cli-kit"
+version = "0.1.1"
+description = "Reflect a FastMCP tool registry into Click commands under one agent-grade output contract"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [
+    { name = "LINC Innovations" },
+]
+readme = "README.md"
+dependencies = [
+    "click>=8.1",
+    "mcp>=1.26,<2",
+]
+
+[project.urls]
+Homepage = "https://github.com/LincForge/cli-kit"
+Issues = "https://github.com/LincForge/cli-kit/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.9",
+    "structlog>=24.0",
+]
+
+[build-system]
+requires = [
+    "hatchling>=1.27",
+]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/linc_cli_kit",
+]
+
+[tool.ruff]
+line-length = 99
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "SIM",
+    "RUF",
+    "ANN",
+]
+ignore = [
+    "ANN401",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "ANN",
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]

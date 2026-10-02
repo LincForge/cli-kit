@@ -162,7 +162,10 @@ def test_heartbeat_is_json_lines_outside_human_mode(mode, monkeypatch):
     monkeypatch.delenv("LINC_OUTPUT", raising=False)
     err = io.StringIO()
     with redirect_stderr(err), heartbeat(interval=0.05, label="t", mode=mode):
-        time.sleep(0.18)
+        # Poll instead of a fixed sleep (macOS CI schedules the beat thread late).
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline and len(err.getvalue().splitlines()) < 2:
+            time.sleep(0.02)
     lines = [line for line in err.getvalue().splitlines() if line]
     assert len(lines) >= 2
     for line in lines:

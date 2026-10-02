@@ -2,6 +2,11 @@
 
 All notable changes to linc-cli-kit are listed here.
 
+## [0.1.3]
+
+- Tests: the JSON-mode heartbeat test also polls instead of a fixed sleep (the sibling of the
+  0.1.2 fix; failed on macOS / Python 3.12 CI). No library changes.
+
 ## [0.1.2]
 
 - Tests: the heartbeat test polls instead of relying on a fixed sleep (it was timing-flaky on

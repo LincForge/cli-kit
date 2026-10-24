@@ -187,6 +187,8 @@ def _polluting_server(write):
     """A toy server whose only tool runs `write()` before returning its payload."""
     from mcp.server.fastmcp import FastMCP
 
+    from linc_cli_kit import strict_tools
+
     server = FastMCP("polluter")
 
     @server.tool()
@@ -195,7 +197,7 @@ def _polluting_server(write):
         write()
         return {"device": device}
 
-    return server
+    return strict_tools(server)
 
 
 def _parity_on(server):
@@ -302,3 +304,38 @@ def test_non_object_json_on_stderr_is_a_named_assertion(toy_server, toy_group):
     cmd.callback = list_errors
     with pytest.raises(AssertionError, match=r"toy_echo.*no envelope on stderr"):
         assert_cli_parity(cli, toy_server, prefix="toy_")
+
+
+def test_contract_assert_cli_parity_requires_mcp_to_reject_unknown_arguments():
+    """[contract] #15: assert_cli_parity checks that MCP rejects an unknown argument the same
+    way the CLI rejects an unknown option, and never invokes the real tool fn when unstrict."""
+    from mcp.server.fastmcp import FastMCP
+
+    from linc_cli_kit import strict_tools
+
+    server = FastMCP("lax")
+    side_effects: list[str] = []
+
+    @server.tool()
+    def lax_ping(device: str) -> dict:
+        """Ping a device."""
+        side_effects.append(device)
+        return {"device": device}
+
+    @click.group()
+    def cli() -> None:
+        """lax"""
+
+    install_globals(cli)
+    mount_tools(cli, server, prefix="lax_", transport=LocalTransport())
+
+    # Without strict_tools(server), MCP accepts unknown args while the CLI rejects them.
+    with pytest.raises(AssertionError, match=r"lax_ping.*unknown argument.*strict_tools"):
+        assert_cli_parity(cli, server, prefix="lax_")
+    assert side_effects == [], "unstrict probe must not execute the real tool body"
+
+    # Once strict_tools(server) is applied, parity passes.
+    strict_tools(server)
+    report = assert_cli_parity(cli, server, prefix="lax_")
+    assert report.tools == 1
+

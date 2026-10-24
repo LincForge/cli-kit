@@ -22,7 +22,7 @@ Save as `hello_cli.py`:
 import click
 from mcp.server.fastmcp import FastMCP
 
-from linc_cli_kit import LocalTransport, install_globals, mount_tools
+from linc_cli_kit import LocalTransport, install_globals, mount_tools, strict_tools
 
 server = FastMCP("hello")
 
@@ -31,6 +31,9 @@ server = FastMCP("hello")
 def hello_greet(name: str, times: int = 1) -> dict:
     """Greet someone. Example: hello greet --name Ada --times 2"""
     return {"greeting": " ".join([f"Hello, {name}!"] * times)}
+
+
+strict_tools(server)
 
 
 @click.group()
@@ -67,13 +70,15 @@ import sys
 import click
 from linc_cli_kit import (
     HttpDaemonTransport, LocalTransport, configure_structlog_stderr,
-    install_globals, mount_tools,
+    install_globals, mount_tools, strict_tools,
 )
 
 configure_structlog_stderr()   # MUST be above your package imports — see below
 
 from <tool>.mcp._core import server            # noqa: E402
 from <tool>.core.controller import Controller  # noqa: E402
+
+strict_tools(server)           # reject unknown MCP tool arguments (matches Click's CLI check)
 
 
 @click.group()
@@ -128,6 +133,9 @@ def test_cli_parity() -> None:
 
 Rules the suite enforces, so read them before adding a command:
 
+- **Every FastMCP server must call `strict_tools(server)`.** FastMCP ignores unknown arguments by
+  default while Click rejects unknown options; the suite verifies that MCP rejects an unknown
+  argument (`extra="forbid"`) and advertises `additionalProperties: false` on every mounted tool.
 - **Every hand-written override needs a `samples[<tool_name>]` entry.** Without one the suite
   fails closed rather than silently skipping the override's JSON contract.
 - **Overrides must route through the group transport** (`ctx.find_root().command.linc_transport`),

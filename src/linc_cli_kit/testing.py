@@ -1,6 +1,6 @@
 """Importable conformance suite (spec §5.5). Each repo calls assert_cli_parity in one test.
 
-Nine checks, run per mounted tool (unless justified-skipped):
+Ten checks, run per mounted tool (unless justified-skipped):
   1. coverage + justified skips
   2. --help exits 0 and names every required option
   3. stubbed success -> bare JSON on stdout, no ANSI, empty stderr, AND the payload the
@@ -22,6 +22,9 @@ Nine checks, run per mounted tool (unless justified-skipped):
      CliRunner alone cannot see it
   8. stubbed generic error -> exit 1, empty stdout, envelope on stderr
   9. `schema --json` lists every mounted command
+  10. unknown-argument rejection parity: MCP rejects an unknown argument (`ToolError` naming
+      the key + `additionalProperties: false` in the schema, via `strict_tools(server)`) the
+      same way the CLI rejects an unknown option (exit 2 + error envelope on stderr)
 
 Every JSON parse goes through a named assertion that reports the tool and the stream.
 
@@ -52,11 +55,13 @@ from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import patch
 
+import anyio
 import click
 from click.testing import CliRunner
+from mcp.server.fastmcp.exceptions import ToolError as FastMCPToolError
 
 from linc_cli_kit.output import to_json
-from linc_cli_kit.registry import ToolSpec, registry_of
+from linc_cli_kit.registry import ToolSpec, registry_of, stubbed_tool_fn
 from linc_cli_kit.schema import RESERVED, cli_name
 from linc_cli_kit.transport import LocalTransport
 
@@ -262,6 +267,47 @@ def _check_option_parity(cmd: click.Command, spec: ToolSpec) -> None:
             )
 
 
+def _check_unknown_argument_rejected(
+    cli: click.Group,
+    cmd: click.Command,
+    server: Any,
+    spec: ToolSpec,
+    name: str,
+    sample: dict[str, Any],
+) -> None:
+    # 10. unknown-argument rejection parity: Click rejects an unknown option with exit 2 and an
+    # error envelope on stderr; MCP must reject an unknown argument the same way (via
+    # strict_tools(server)) rather than silently dropping it.
+    unknown_key = "__linc_unknown_arg__"
+    unknown_flag = "--__linc_unknown_arg__"
+    r = _invoke(cli, [name, *_sample_args(cmd, sample), unknown_flag, "x"])
+    assert r.exit_code == 2, (
+        f"{spec.name}: expected exit 2 for unknown CLI option {unknown_flag}, "
+        f"got {r.exit_code}: {r.output}"
+    )
+    assert r.stdout == "", f"{spec.name}: stdout not empty on unknown CLI option"
+    doc = _loads(r.stderr, spec.name, "stderr")
+    assert isinstance(doc, dict) and doc.get("error"), (
+        f"{spec.name}: no envelope on stderr for unknown CLI option; got {r.stderr[:200]!r}"
+    )
+
+    with stubbed_tool_fn(server, spec.name):
+        try:
+            anyio.run(server.call_tool, spec.name, {**sample, unknown_key: "x"})
+        except FastMCPToolError as exc:
+            assert unknown_key in str(exc), (
+                f"{spec.name}: MCP error for unknown argument did not name {unknown_key!r}: {exc}"
+            )
+        else:
+            raise AssertionError(
+                f"{spec.name}: MCP accepted unknown argument {unknown_key!r} while CLI "
+                "rejected it — call strict_tools(server)"
+            )
+    assert spec.parameters.get("additionalProperties") is False, (
+        f"{spec.name}: MCP schema missing additionalProperties: false — call strict_tools(server)"
+    )
+
+
 def _assert_error_stubs(
     cli: click.Group, transport_holder: Any, name: str, args: list[str], label: str
 ) -> None:
@@ -440,7 +486,9 @@ def _run_parity(
 
         _check_option_parity(cmd, spec)
         sample = samples.get(spec.name)
-        _check_stubbed_output_contract(cli, cmd, spec, name, sample or _minimal_sample(spec))
+        sample_or_minimal = sample or _minimal_sample(spec)
+        _check_stubbed_output_contract(cli, cmd, spec, name, sample_or_minimal)
+        _check_unknown_argument_rejected(cli, cmd, server, spec, name, sample_or_minimal)
         if sample is not None:
             _check_execution_consistency(cli, cmd, spec, name, sample)
 

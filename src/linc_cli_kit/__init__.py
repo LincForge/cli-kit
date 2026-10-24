@@ -17,7 +17,7 @@ from linc_cli_kit.mount import (
     mount_tools,
 )
 from linc_cli_kit.output import emit, emit_exception, heartbeat, json_default, to_json
-from linc_cli_kit.registry import ToolSpec, registry_of
+from linc_cli_kit.registry import ToolSpec, registry_of, strict_tools
 from linc_cli_kit.transport import HttpDaemonTransport, LocalTransport
 
 if TYPE_CHECKING:
@@ -46,6 +46,7 @@ __all__ = [
     "mount_tools",
     "parse_error_envelope",
     "registry_of",
+    "strict_tools",
     "to_json",
 ]
 

@@ -2,6 +2,17 @@
 
 All notable changes to linc-cli-kit are listed here.
 
+## [0.1.4]
+
+- `strict_tools(server, *, strict_types=False)`: rejects unknown MCP tool arguments. Every
+  registered tool's argument model gets `extra="forbid"` and its schema advertises
+  `additionalProperties: false`, including tools registered after the call. `strict_types=True`
+  also turns off lax type coercion. It raises `TypeError`, naming the change, if the MCP SDK
+  internals it relies on are missing. Exported as `linc_cli_kit.strict_tools`.
+- `assert_cli_parity` checks that MCP rejects an unknown argument, matching the CLI's exit-2
+  rejection of an unknown option.
+- Lint: ruff `S101` (no `assert` in library code) is on; tests are exempt.
+
 ## [0.1.3]
 
 - Tests: the JSON-mode heartbeat test also polls instead of a fixed sleep (the sibling of the

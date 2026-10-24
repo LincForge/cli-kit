@@ -8,6 +8,8 @@ import click
 import pytest
 from mcp.server.fastmcp import FastMCP
 
+from linc_cli_kit import strict_tools
+
 
 def build_toy_server() -> FastMCP:
     server = FastMCP("toy")
@@ -46,7 +48,7 @@ def build_toy_server() -> FastMCP:
         """Async tool."""
         return {"device": device, "async": True}
 
-    return server
+    return strict_tools(server)
 
 
 @pytest.fixture

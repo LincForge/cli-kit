@@ -141,7 +141,7 @@ def test_parity_execution_consistency_uses_the_same_encoder():
     import click
     from mcp.server.fastmcp import FastMCP
 
-    from linc_cli_kit import install_globals, mount_tools
+    from linc_cli_kit import install_globals, mount_tools, strict_tools
     from linc_cli_kit.testing import assert_cli_parity
     from linc_cli_kit.transport import LocalTransport
 
@@ -151,6 +151,8 @@ def test_parity_execution_consistency_uses_the_same_encoder():
     def dt_when(device: str) -> dict:
         """When."""
         return {"device": device, "at": datetime.datetime(2026, 1, 1, 0, 0), "tags": {"x"}}
+
+    strict_tools(server)
 
     @click.group()
     def cli() -> None:
